@@ -3,39 +3,42 @@ if __name__ == "__main__":
 	from os import path
 	sp.append(path.abspath(path.join(path.dirname(__file__), '..')))
 import modules.state as state
-from tkinter import Toplevel, IntVar
-from logging import getLogger 
-from tkinter import ttk
+from logging import getLogger
+from PySide6.QtWidgets import QDialog, QLabel, QPushButton, QSpinBox, QVBoxLayout
+
 logger = getLogger(__name__)
 
-class delayGUI(Toplevel):
+class delayGUI(QDialog):
 	def __init__(self):
 		self.logger = getLogger(__name__)
-		if (obj := state.openGUIs.get("schedule", None)) is not None:
-			self.destroy()
-			obj.focus()
+		if (obj := state.openGUIs.get("delay", None)) is not None:
+			obj.raise_()
+			obj.activateWindow()
 			return self.logger.debug("Delay window opened more than once. Refocussed on older window")
 		super().__init__(state.clock)
 		loc = state.settings.localization
-		self.title(loc.delaySetting.title)
-		self.geometry(f"+{self.winfo_screenwidth()//2-25}+{self.winfo_screenheight()//2-25}")
-		self.resizable(False, False)
-		self.grid(1, 6, 150, 50)
-		self.delayvar = IntVar(value=state.settings.schedule.delay)
-		ttk.Label(self, text=loc.delaySetting.label).grid(row=0, column=0)
-		ttk.Entry(self, textvariable=self.delayvar).grid(row=1, column=0)
-		ttk.Label(self, text=loc.delaySetting.help).grid(row=2, column=0, rowspan=2)
-		ttk.Button(self, text=loc.delaySetting.btn, command=self.saveValue).grid(row=5, column=0)
-		self.focus_force()
-		self.bind('<Up>', lambda _: self.delayvar.set(self.delayvar.get() + 1))
-		self.bind('<Down>', lambda _: self.delayvar.set(self.delayvar.get() - 1))
-		self.bind('<Return>', lambda _: self.saveValue())
-		self.protocol("WM_DELETE_WINDOW", self.closeWindow)
+		self.setWindowTitle(loc.delaySetting.title)
+		layout = QVBoxLayout(self)
+		layout.addWidget(QLabel(loc.delaySetting.label))
+		self.delaySpin = QSpinBox(self)
+		self.delaySpin.setRange(-3600, 3600)
+		self.delaySpin.setValue(state.settings.schedule.delay)
+		layout.addWidget(self.delaySpin)
+		layout.addWidget(QLabel(loc.delaySetting.help))
+		saveBtn = QPushButton(loc.delaySetting.btn)
+		saveBtn.clicked.connect(self.saveValue)
+		layout.addWidget(saveBtn)
 		state.openGUIs["delay"] = self
+		self.show()
+		self.raise_()
+		self.activateWindow()
 	def saveValue(self):
-		state.settings.schedule.delay = self.delayvar.get()
+		state.settings.schedule.delay = self.delaySpin.value()
 		state.settings.schedule.save()
 		self.closeWindow()
 	def closeWindow(self):
-		self.destroy()
-		state.openGUIs.pop("delay")
+		state.openGUIs.pop("delay", None)
+		self.close()
+	def closeEvent(self, event):
+		state.openGUIs.pop("delay", None)
+		super().closeEvent(event)

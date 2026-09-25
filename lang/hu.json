@@ -111,6 +111,11 @@
 			"instruction": "Kattintson egy órára hogy szerkessze az óra adatait.",
 			"add_slot": "Óra hozzáadása",
 			"group": "{index}. csoport",
+			"time_slot.title": "Idő beállítása - {slot}. óra",
+			"time_slot.start": "Kezdés",
+			"time_slot.end": "Vége",
+			"time_slot.tooltip": "Kattintson a kezdő és befejező idő beállításához",
+			"time_slot.invalid.title": "Érvénytelen idő",
 			"assignments": {
 				"no_classes.title": "Nincsenek órák",
 				"no_classes.message": "Adjon órákat a beállításokba, mielőtt órarendet szerkesztene.",

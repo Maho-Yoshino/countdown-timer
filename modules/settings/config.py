@@ -61,11 +61,8 @@ class Config:
 	def showTeacher(self, value:bool):
 		self._data["showTeacher"] = value
 		try:
-			for frame in state.clock.classFrames:
-				if value:
-					frame.teacherLabel.grid(row=2)
-				else:
-					frame.teacherLabel.grid_forget()
+			if state.clock is not None:
+				state.clock.refreshFromSettings()
 		except (AttributeError, NameError):
 			self._logger.exception("Could not find clock's class frames")
 	# endregion
@@ -99,19 +96,9 @@ class Config:
 			return int(self._defaults["background"].removeprefix("#"), 16)
 	@background.setter
 	def background(self, value:int):
-		_ = f"#{value:06X}"
-		clk = state.clock
-		self._data["background"] = _
-		state.clock.root.config(background=_)
-		clk.mainLabel.config(background=_)
-		clk.timeLabel.config(background=_)
-		clk.auxLabel.config(background=_)
-		clk.homeworkLabel.config(background=_)
-		clk.examLabel.config(background=_)
-		clk.separator.config(background=_)
-		clk.vertSeparator.config(background=_)
-		for frame in clk.classFrames:
-			frame.bg = _
+		self._data["background"] = f"#{value:06X}"
+		if state.clock is not None:
+			state.clock.refreshFromSettings()
 	# endregion
 	# region Foreground color
 	@property
@@ -119,18 +106,9 @@ class Config:
 		return int(self._data["foreground"].removeprefix("#"), 16)
 	@foreground.setter
 	def foreground(self, value:int):
-		_ = f"#{value:06X}"
-		clk = state.clock
-		self._data["foreground"] = _
-		clk.mainLabel.config(fg=_)
-		clk.timeLabel.config(fg=_)
-		clk.auxLabel.config(fg=_)
-		clk.homeworkLabel.config(fg=_)
-		clk.examLabel.config(fg=_)
-		clk.separator.config(fg=_)
-		clk.vertSeparator.config(fg=_)
-		for frame in clk.classFrames:
-			frame.fg = _
+		self._data["foreground"] = f"#{value:06X}"
+		if state.clock is not None:
+			state.clock.refreshFromSettings()
 	# endregion
 	# region Language
 	@property

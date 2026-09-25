@@ -16,13 +16,14 @@ This is a countdown program until end of class, for both students and teachers
 [Trello board](https://trello.com/b/SpFVKoKa)  
 ## Requirements  
 - Python 3.12+  
-- Windows 10+  
+- Windows 10+ or Linux (the UI uses Qt via PySide6)  
+- The system tray icon uses Qt's native tray (StatusNotifierItem), so no extra packages are needed on Linux.  
 ## Build from source  
 - Git clone the repo  
 ```bat  
 git clone git@github.com:Maho-Yoshino/countdown-timer.git  
 ```  
 - Change directory to the new `countdown-timer` folder  
-- run `setup.bat`  
-- If running from source run `countdown-timer.bat"`  
-- else if building an exe run `package.bat`  
+- Windows: run `setup.bat`, then `countdown_timer.bat`  
+- Linux: run `./setup.sh`, then `./run.sh`  
+- To build a Windows exe run `package.bat`

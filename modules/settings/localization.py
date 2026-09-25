@@ -2,7 +2,6 @@ from __future__ import annotations
 from json import load as jload
 from pathlib import Path
 from logging import getLogger
-from tkinter import messagebox
 from dataclasses import dataclass
 
 def merge(obj: dict, default: dict) -> dict:
@@ -155,17 +154,16 @@ class Localization:
 	settings:_settingsLoc
 	def __init__(self, language:str):
 		self.logger = getLogger(__name__)
-		if not Path(f"lang\\{language}.json").exists():
+		if not (Path("lang") / f"{language}.json").exists():
 			self.logger.warning(f"Given locale '{language}.json' does not exist. Defaulting to english.")
-			messagebox.showwarning("Invalid language selected", f"The selected language '{language}' does not exist in the program.\nDefaulting to english.")
 			language = "en"
-		if language == "en" and not Path("lang\\en.json").exists():
+		if language == "en" and not (Path("lang") / "en.json").exists():
 			self.logger.critical("English locale doesn't exist on user's computer")
 			return
-		with open(f"lang\\{language}.json", "r", encoding="utf-8") as f:
+		with open(Path("lang") / f"{language}.json", "r", encoding="utf-8") as f:
 			self._lang:dict = jload(f)
 			self.logger.info(f"Locale '{language}' loaded properly")
-		with open(f"lang\\en.json", "r", encoding="utf-8") as f:
+		with open(Path("lang") / "en.json", "r", encoding="utf-8") as f:
 			self._defaults:dict = jload(f)
 		self._merged = merge(self._lang, self._defaults)
 		self._lang_tag = language

@@ -1,10 +1,12 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 from datetime import datetime
-from asyncio import CancelledError, Task, AbstractEventLoop, sleep as asleep
-from tkinter import Tk, TclError, messagebox, Toplevel
-from tkinter.font import Font
+from asyncio import CancelledError, Task, AbstractEventLoop
 from logging import getLogger
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
+from PySide6.QtGui import QFont
+from PySide6.QtCore import QTimer
+
 _logger = getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -17,45 +19,39 @@ settings:Settings = None
 schedule:Schedule = None
 tray:Tray = None
 clock:Clock
+app:QApplication = None
 
 windowHandle:str = u"Csengetés időzítő"
 dummyDate:Optional[datetime] = None
 
 runtime:AbstractEventLoop = None
-tkPumpTask: Task = None
 
 currentClassIndex:int|None = None
-openGUIs:dict[str, Toplevel] = {}
+openGUIs:dict[str, QWidget] = {}
 
-async def tkPump(root: Tk):
-	_logger.debug("tkPump started")
-	try:
-		while True:
-			try:
-				root.update_idletasks()
-				root.update()
-			except TclError:
-				break
-			await asleep(1/60) # 60 FPS
-	except CancelledError:
-		pass
 def getTime(): return datetime.now() if dummyDate is None else dummyDate
+
+def callLater(func, *args):
+	"""Schedule a callback on the Qt event loop (main thread)."""
+	QTimer.singleShot(0, lambda: func(*args))
+
 def exc_handler(task: Task):
 	try:
 		task.result()
-	except CancelledError: return
+	except CancelledError:
+		return
 	except Exception as e:
 		_logger.exception("Unhandled async task exception", exc_info=e)
-		def showError(): # Needs a seperate def apparently due to threading
-			messagebox.showerror(
+		def showError():
+			QMessageBox.critical(
+				None,
 				settings.localization.messages.error.title,
 				settings.localization.messages.error.message,
-				icon="error"
 			)
 			tray.quit()
-		try:
-			clock.after(0, showError)
-		except Exception:
-			_logger.exception("Failed to schedule Tk error dialog")
-			tray.quit()
-def fontSize(size:int): return Font(size=size)
+		callLater(showError)
+
+def fontSize(size:int) -> QFont:
+	font = QFont()
+	font.setPointSize(size)
+	return font

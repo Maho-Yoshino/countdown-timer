@@ -3,27 +3,104 @@ from datetime import datetime, timedelta
 from asyncio import sleep as asleep, CancelledError
 from time import perf_counter
 from logging import getLogger
-from tkinter import Button, Label, Frame, TclError, Tk, Toplevel
-from tksvg import SvgImage
-from ctypes import windll, c_byte, byref, Structure
+from os import environ
+import ctypes
+import ctypes.util
+from PySide6.QtWidgets import QWidget, QLabel, QFrame, QVBoxLayout, QHBoxLayout, QGridLayout, QMessageBox
+from PySide6.QtCore import Qt, QByteArray, QRect, QPoint, QTimer
+from PySide6.QtGui import QGuiApplication, QPixmap, QPainter, QIcon, QColor, QCursor
+from PySide6.QtSvg import QSvgRenderer
 from modules.schedule import Schedule
 from modules.settings.schedule import UnifiedClassData, _classData
 
-init_data:dict[str, int|str] = {}
-class classFrame(Frame):
-	_data:dict[str, int|str|_classData|None]
+init_data:dict[str, str] = {}
+
+# X11 cursor query. QCursor.pos() can return a stale cached position on xcb when
+# the pointer is over the root window or foreign windows, so we query the X
+# server directly (this is what Tkinter's winfo_pointerx/y used under the hood).
+_x11_lib = None
+_x11_display = None
+_x11_pointer_child = None
+def _x11():
+	global _x11_lib, _x11_display
+	if _x11_lib is None:
+		lib_name = ctypes.util.find_library("X11")
+		if not lib_name:
+			return None, None
+		try:
+			lib = ctypes.CDLL(lib_name)
+			lib.XOpenDisplay.restype = ctypes.c_void_p
+			lib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+			lib.XDefaultRootWindow.argtypes = [ctypes.c_void_p]
+			lib.XDefaultRootWindow.restype = ctypes.c_ulong
+			lib.XQueryPointer.argtypes = [
+				ctypes.c_void_p, ctypes.c_ulong,
+				ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_ulong),
+				ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+				ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+				ctypes.POINTER(ctypes.c_uint),
+			]
+			lib.XQueryPointer.restype = ctypes.c_int
+			display = lib.XOpenDisplay(None)
+			_x11_lib = lib
+			_x11_display = display
+		except Exception:
+			_x11_lib = None
+			_x11_display = None
+	return _x11_lib, _x11_display
+def getGlobalCursorPos() -> QPoint:
+	"""Return the current global cursor position, fresh from the X server."""
+	global _x11_pointer_child
+	lib, display = _x11()
+	if lib is not None and display:
+		try:
+			root = lib.XDefaultRootWindow(display)
+			root_ret = ctypes.c_ulong()
+			child_ret = ctypes.c_ulong()
+			root_x = ctypes.c_int()
+			root_y = ctypes.c_int()
+			win_x = ctypes.c_int()
+			win_y = ctypes.c_int()
+			mask = ctypes.c_uint()
+			lib.XQueryPointer(
+				display, root,
+				ctypes.byref(root_ret), ctypes.byref(child_ret),
+				ctypes.byref(root_x), ctypes.byref(root_y),
+				ctypes.byref(win_x), ctypes.byref(win_y),
+				ctypes.byref(mask),
+			)
+			_x11_pointer_child = child_ret.value
+			# XQueryPointer reports native pixels; Qt uses logical pixels.
+			dpr = 1.0
+			screen = QGuiApplication.primaryScreen()
+			if screen is not None:
+				dpr = screen.devicePixelRatio()
+			return QPoint(round(root_x.value / dpr), round(root_y.value / dpr))
+		except Exception:
+			pass
+	_x11_pointer_child = None
+	return QCursor.pos()
+class classFrame(QWidget):
+	_data:dict[str, str|_classData|None]
 	def __init__(self, master, _class:_classData|None):
 		self._data = {
 			"wraplength": 0,
-			"bg":init_data["bg"],
-			"fg":init_data["fg"],
-			"class":_class
+			"bg": init_data["bg"],
+			"fg": init_data["fg"],
+			"class": _class
 		}
 		self._logger = getLogger(__name__)
-		super().__init__(master, bg=init_data["bg"])
-		self.nameLabel = Label(self, cnf=init_data, padx=5, anchor="n", justify="center")
-		self.roomLabel = Label(self, cnf=init_data, padx=5, anchor="n", justify="center")
-		self.teacherLabel = Label(self, cnf=init_data, padx=5, anchor="n", justify="center")
+		super().__init__(master)
+		layout = QVBoxLayout(self)
+		layout.setContentsMargins(0, 0, 0, 0)
+		layout.setSpacing(2)
+		self.nameLabel = QLabel(self)
+		self.roomLabel = QLabel(self)
+		self.teacherLabel = QLabel(self)
+		for label in (self.nameLabel, self.roomLabel, self.teacherLabel):
+			label.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+			label.setWordWrap(True)
+			layout.addWidget(label)
 		self._class = _class
 	# region Class
 	@property
@@ -33,20 +110,17 @@ class classFrame(Frame):
 	def _class(self, value:_classData|None):
 		self._data["class"] = value
 		if value is not None:
-			self.nameLabel.config(text=value.name)
-			self.nameLabel.grid(row=0)
-			self.roomLabel.config(text=value.room)
-			self.roomLabel.grid(row=1)
-			self.teacherLabel.config(text=value.teacher)
-			if state.settings.config.showTeacher:
-				self.teacherLabel.grid(row=2)
-			else:
-				self.teacherLabel.grid_forget()
+			self.nameLabel.setText(value.name)
+			self.nameLabel.setVisible(True)
+			self.roomLabel.setText(value.room)
+			self.roomLabel.setVisible(True)
+			self.teacherLabel.setText(value.teacher)
+			self.teacherLabel.setVisible(state.settings.config.showTeacher)
 		else:
-			self.nameLabel.config(text=state.settings.localization.noneClass)
-			self.nameLabel.grid(row=0)
-			self.roomLabel.grid_forget()
-			self.teacherLabel.grid_forget()
+			self.nameLabel.setText(state.settings.localization.noneClass)
+			self.nameLabel.setVisible(True)
+			self.roomLabel.setVisible(False)
+			self.teacherLabel.setVisible(False)
 	# endregion
 	# region Background
 	@property
@@ -55,10 +129,6 @@ class classFrame(Frame):
 	@bg.setter
 	def bg(self, value:str):
 		self._data["bg"] = value
-		self.nameLabel.config(bg=value)
-		self.roomLabel.config(bg=value)
-		self.teacherLabel.config(bg=value)
-		self.config(bg=value)
 	# endregion
 	# region Foreground
 	@property
@@ -67,9 +137,6 @@ class classFrame(Frame):
 	@fg.setter
 	def fg(self, value:str):
 		self._data["fg"] = value
-		self.nameLabel.config(fg=value)
-		self.roomLabel.config(fg=value)
-		self.teacherLabel.config(fg=value)
 	# endregion
 	# region Wraplength
 	@property
@@ -78,285 +145,256 @@ class classFrame(Frame):
 	@wraplength.setter
 	def wraplength(self, value:int):
 		self._data["wraplength"] = value
-		self.nameLabel.config(wraplength=value)
-		self.roomLabel.config(wraplength=value)
-		self.teacherLabel.config(wraplength=value)
+		self.nameLabel.setMaximumWidth(max(value, 20))
+		self.roomLabel.setMaximumWidth(max(value, 20))
+		self.teacherLabel.setMaximumWidth(max(value, 20))
 	# endregion
-class Clock(Tk):
+class Clock(QWidget):
 	def __init__(self):
-		# Rows setup:
-		# 0 - Mainlabel
-		# 1 - TimeFrame (timeLabel, homeworkLabel, examLabel)
-		# 2 - Horizontal separator
-		# 3 - classesFrame
-		# 4 - auxLabel
 		global init_data
 		init_data = {
-			"text":"",
-			"bg":f"#{state.settings.config.background:06x}",
-			"fg":f"#{state.settings.config.foreground:06x}"
+			"bg": f"#{state.settings.config.background:06x}",
+			"fg": f"#{state.settings.config.foreground:06x}"
 		}
 		state.schedule = Schedule()
-		# region Misc config
 		super().__init__()
 		self.logger = getLogger(__name__)
-		# endregion
+
 		# region Main config
-		self.iconbitmap(default="assets/icon.ico")
-		self.configure(bg=f"#{state.settings.config.background:06x}")
-		self.attributes("-topmost", True)
-		self.title(state.windowHandle)
-		self.resizable(False, False)
-		self.overrideredirect(True)
-		self.wm_attributes("-alpha", state.settings.config.alpha["default"])
-		width = self.winfo_screenwidth()//6
-		height = self.winfo_screenheight()//4
-		self.geometry(f"{width}x{height}+{self.winfo_screenwidth()-width}+0")
-		self.config(padx=15, pady=15)
-		self.grid_columnconfigure(0, weight=1)
+		self.setWindowTitle(state.windowHandle)
+		self.setWindowIcon(QIcon("assets/icon.ico"))
+		self.setWindowFlags(
+			Qt.FramelessWindowHint |
+			Qt.WindowStaysOnTopHint |
+			Qt.Tool |
+			Qt.WindowTransparentForInput
+		)
+		self.setAttribute(Qt.WA_TransparentForMouseEvents, True) # Click-through
+		self.setWindowOpacity(state.settings.config.alpha["default"])
+		self.hoverTransparencyEnabled = not (
+			environ.get("WAYLAND_DISPLAY") or
+			environ.get("XDG_SESSION_TYPE") == "wayland"
+		)
+		self.setStyleSheet(f"background-color: {init_data['bg']}; color: {init_data['fg']};")
+		screen = QGuiApplication.primaryScreen().availableGeometry()
+		width = screen.width() // 6
+		height = screen.height() // 4
+		self.setGeometry(screen.x() + screen.width() - width, screen.y(), width, height)
 		# endregion
+
+		rootLayout = QVBoxLayout(self)
+		rootLayout.setContentsMargins(15, 15, 15, 15)
+		rootLayout.setSpacing(4)
+
 		# region Main text and time config
-		self.mainLabel = Label(self, init_data, font=state.fontSize(20))
-		self.mainLabel.grid(row=0, column=0, sticky="nsew")
-		self.mainLabel.grid_rowconfigure(0, weight=1)
+		self.mainLabel = QLabel(self)
+		self.mainLabel.setFont(state.fontSize(20))
+		self.mainLabel.setAlignment(Qt.AlignCenter)
+		rootLayout.addWidget(self.mainLabel, stretch=1)
 
-		self.timeFrame = Frame(self, bg=init_data["bg"]) # Frame so the exam and homework icons can happen
-		self.timeFrame.grid_rowconfigure(0, weight=1)
-		self.timeFrame.grid_rowconfigure(1, weight=1)
-		self.timeLabel = Label(self.timeFrame, init_data, font=state.fontSize(30), anchor="center")
-		self.timeLabel.grid(column=1)
-		self.timeLabel.grid_columnconfigure(1, weight=1)
+		self.timeFrame = QWidget(self)
+		timeLayout = QGridLayout(self.timeFrame)
+		timeLayout.setContentsMargins(0, 0, 0, 0)
+		self.timeLabel = QLabel(self.timeFrame)
+		self.timeLabel.setFont(state.fontSize(30))
+		self.timeLabel.setAlignment(Qt.AlignCenter)
+		timeLayout.addWidget(self.timeLabel, 0, 1, 2, 1)
+		timeLayout.setColumnStretch(1, 1)
 		self.homeworkIcon = self.loadSvg("homework")
-		self.homeworkLabel = Label(self.timeFrame, image=self.homeworkIcon, bg=init_data["bg"], fg=init_data["fg"])
-		self.homeworkLabel.image = self.homeworkIcon
+		self.homeworkLabel = QLabel(self.timeFrame)
+		self.homeworkLabel.setPixmap(self.homeworkIcon)
 		self.examIcon = self.loadSvg("exam")
-		self.examLabel = Label(self.timeFrame, image=self.examIcon, bg=init_data["bg"], fg=init_data["fg"])
-		self.examLabel.image = self.examIcon
+		self.examLabel = QLabel(self.timeFrame)
+		self.examLabel.setPixmap(self.examIcon)
+		timeLayout.addWidget(self.homeworkLabel, 1, 3)
+		timeLayout.addWidget(self.examLabel, 1, 3)
+		self.homeworkLabel.hide()
+		self.examLabel.hide()
+		rootLayout.addWidget(self.timeFrame, stretch=1)
 		# endregion
+
 		# region Classes setup
-		self.separator = Frame(self, bg=init_data["fg"], height=1, width=self.winfo_screenwidth())
-		
-		self.classesContainer = Frame(self, bg=init_data["bg"])
+		self.separator = QFrame(self)
+		self.separator.setFrameShape(QFrame.HLine)
+		self.separator.setFixedHeight(1)
+		self.separator.setStyleSheet(f"background-color: {init_data['fg']};")
+		rootLayout.addWidget(self.separator)
+
+		self.classesContainer = QWidget(self)
+		self.classesLayout = QHBoxLayout(self.classesContainer)
+		self.classesLayout.setContentsMargins(0, 0, 0, 0)
+		self.classesLayout.setSpacing(6)
+		rootLayout.addWidget(self.classesContainer, stretch=1)
+
 		self.classFrames:list[classFrame] = []
-		highestClassesAtOnce = 0
-		unified = state.settings.schedule.getUnifiedSchedule()
-		for ind, day in enumerate(unified):
-			if len(unified[highestClassesAtOnce]) < len(day):
-				highestClassesAtOnce = ind
-		for _ in range(len(unified[highestClassesAtOnce])):
-			_ = unified[highestClassesAtOnce][_].data
-			for _ in [classFrame(self.classesContainer, _[i]) for i in range(len(_))]:
-				self.classFrames.append(_)
-		self.vertSeparators:list[Frame] = []
-
-		self.grid_rowconfigure(3, weight=1)
-		# endregion
-		# region Misc setup
-		self.auxLabel = Label(self, init_data, font=state.fontSize(10), anchor="center", justify="center", text=state.settings.localization.nextClass)
-		self.grid_rowconfigure(4, weight=0)
-
-		self.protocol("WM_DELETE_WINDOW", self.withdraw)
-		# endregion
-		# region Asyncio loops
-		self.mainloopTask = state.runtime.create_task(self.mainloop())
-		self.mainloopTask.add_done_callback(state.exc_handler)
-		self.setClickThroughTask = state.runtime.create_task(self.setClickThrough())
-		self.setClickThroughTask.add_done_callback(state.exc_handler)
-		self.transparencyTask = state.runtime.create_task(self.transparencyCheck())
-		self.transparencyTask.add_done_callback(state.exc_handler)
-		# endregion
-		self.logger.info("Clock setup complete")
-	def refreshFromSettings(self):
-		bg = f"#{state.settings.config.background:06x}"
-		fg = f"#{state.settings.config.foreground:06x}"
-		self.configure(bg=bg)
-		self.mainLabel.config(bg=bg, fg=fg)
-		self.timeFrame.config(bg=bg)
-		self.timeLabel.config(bg=bg, fg=fg)
-		self.auxLabel.config(bg=bg, fg=fg)
-		self.separator.config(bg=fg)
-	
-		self.homeworkIcon = self.loadSvg("homework")
-		self.homeworkLabel.config(image=self.homeworkIcon, bg=bg, fg=fg)
-		self.homeworkLabel.image = self.homeworkIcon
-	
-		self.examIcon = self.loadSvg("exam")
-		self.examLabel.config(image=self.examIcon, bg=bg, fg=fg)
-		self.examLabel.image = self.examIcon
-	
-		state.schedule = Schedule()
-		self.rebuildClassFrames()
-	def rebuildClassFrames(self):
-		for frame in self.classFrames:
-			frame.destroy()
-		self.classFrames.clear()
-	
-		for sep in self.vertSeparators:
-			sep.destroy()
-		self.vertSeparators.clear()
-	
+		self.vertSeparators:list[QFrame] = []
 		unified = state.settings.schedule.getUnifiedSchedule()
 		max_groups = 1
 		for day in unified:
 			for entry in day:
 				if entry.data is not None:
 					max_groups = max(max_groups, len(entry.data))
-	
 		for _ in range(max_groups):
 			self.classFrames.append(classFrame(self.classesContainer, None))
-	def loadSvg(self, filename:str) -> SvgImage:
+		# endregion
+
+		# region Misc setup
+		self.auxLabel = QLabel(self)
+		self.auxLabel.setFont(state.fontSize(10))
+		self.auxLabel.setAlignment(Qt.AlignCenter)
+		self.auxLabel.setWordWrap(True)
+		self.auxLabel.setText(state.settings.localization.nextClass)
+		rootLayout.addWidget(self.auxLabel)
+		# endregion
+
+		# region Asyncio loops
+		self.mainloopTask = state.runtime.create_task(self.mainloop())
+		self.mainloopTask.add_done_callback(state.exc_handler)
+		self.transparencyTarget = None
+		self.transparencyTimer = QTimer(self)
+		self.transparencyTimer.setInterval(100)
+		self.transparencyTimer.timeout.connect(self.updateTransparency)
+		if self.hoverTransparencyEnabled:
+			self.transparencyTimer.start()
+		# endregion
+		self.show()
+		self.logger.info("Clock setup complete")
+	def refreshFromSettings(self):
+		bg = f"#{state.settings.config.background:06x}"
+		fg = f"#{state.settings.config.foreground:06x}"
+		init_data["bg"] = bg
+		init_data["fg"] = fg
+		self.setStyleSheet(f"background-color: {bg}; color: {fg};")
+		self.separator.setStyleSheet(f"background-color: {fg};")
+		self.setWindowOpacity(state.settings.config.alpha["default"])
+
+		self.homeworkIcon = self.loadSvg("homework")
+		self.homeworkLabel.setPixmap(self.homeworkIcon)
+		self.examIcon = self.loadSvg("exam")
+		self.examLabel.setPixmap(self.examIcon)
+
+		state.schedule = Schedule()
+		self.rebuildClassFrames()
+	def rebuildClassFrames(self):
+		for frame in self.classFrames:
+			frame.deleteLater()
+		self.classFrames.clear()
+		for sep in self.vertSeparators:
+			sep.deleteLater()
+		self.vertSeparators.clear()
+
+		unified = state.settings.schedule.getUnifiedSchedule()
+		max_groups = 1
+		for day in unified:
+			for entry in day:
+				if entry.data is not None:
+					max_groups = max(max_groups, len(entry.data))
+		for _ in range(max_groups):
+			self.classFrames.append(classFrame(self.classesContainer, None))
+	def loadSvg(self, filename:str) -> QPixmap:
 		try:
 			with open(f"assets/{filename}.svg", "r") as file:
 				svg_text = file.read().replace("<svg ", f"<svg fill='#{state.settings.config.foreground:06x}' ")
 		except FileNotFoundError:
-			self.logger.exception(f"File \"assets/{filename}.png\" could not be found")
+			self.logger.exception(f"File \"assets/{filename}.svg\" could not be found")
 			raise
-		return SvgImage(filename, master=self.timeFrame, data=svg_text, scaletoheight=25)
-	lastWidth:int = 0
-	async def setClickThrough(self):
-		self.logger.debug("Setting click-through window")
-		while not self.winfo_viewable():
-			await asleep(0.05)
-		self.logger.debug("Window found")
-		try:
-			while True:
-				hwnd = windll.user32.FindWindowW(None, self.title())
-				styles = windll.user32.GetWindowLongW(hwnd, -20)
-				styles |= 0x00000020  # WS_EX_LAYERED (Allows transparency)	
-				styles |= 0x00000080  # WS_EX_TRANSPARENT (Click-through)
-				windll.user32.SetWindowLongW(hwnd, -20, styles)
-				if (windll.user32.GetWindowLongW(hwnd, -20)) & 0x00000080 == 0x00000080:
-					self.logger.debug("Click-through successfully set")
-					break
-				await asleep(0.5)
-		except CancelledError: pass
-		except Exception:
-			self.logger.exception(f"An error occured while setting transparency setting")
+		renderer = QSvgRenderer(QByteArray(svg_text.encode("utf-8")))
+		pixmap = QPixmap(25, 25)
+		pixmap.fill(Qt.transparent)
+		painter = QPainter(pixmap)
+		renderer.render(painter)
+		painter.end()
+		return pixmap
 	def batterySaverEnabled(self, on_val, off_val):
-		try:
-			class SYSTEM_POWER_STATUS(Structure):
-				_fields_ = [
-					("ACLineStatus", c_byte),
-					("BatteryFlag", c_byte),
-					("BatteryLifePercent", c_byte),
-					("SystemStatusFlag", c_byte)
-				]
-			status = SYSTEM_POWER_STATUS()
-			if windll.kernel32.GetSystemPowerStatus(byref(status)) == 0:
-				return off_val # Failed to get status, assume OFF
-			return on_val if bool(status.SystemStatusFlag & 1) else off_val  # 1 means Battery Saver is ON
-		except (ImportError, CancelledError):
+		# Windows-specific battery saver detection is not available on Linux.
+		return off_val
+	def updateTransparency(self):
+		if not self.hoverTransparencyEnabled:
 			return
-		except Exception:
-			self.logger.exception("An error occurred while checking battery saver status.") 
-	async def transparencyCheck(self):
-		async def isCursorOverWindow():
-			win_x = self.winfo_rootx()
-			win_y = self.winfo_rooty()
-			return (win_x <= self.winfo_pointerx() <= win_x + self.winfo_width() and 
-					win_y <= self.winfo_pointery() <= win_y + self.winfo_height())
-		while True:
-			try:
-				if not await isCursorOverWindow() and self.wm_attributes("-alpha") != state.settings.config.alpha["default"]: 
-					self.wm_attributes("-alpha", state.settings.config.alpha["default"])
-				elif await isCursorOverWindow() and self.wm_attributes("-alpha") != state.settings.config.alpha["onHover"]: 
-					self.wm_attributes("-alpha", state.settings.config.alpha["onHover"])
-				await asleep(self.batterySaverEnabled(1, 0.1))
-			except CancelledError:
-				break
-			except TclError:
-				if state.tray is not None and state.tray.shutting_down:
-					break
-				await asleep(0.1)
-			except Exception:
-				self.logger.exception("An error happened during transparency check")
+		cursor = getGlobalCursorPos()
+		over = (
+			_x11_pointer_child not in (None, 0)
+			and self.frameGeometry().contains(cursor)
+		)
+		target = state.settings.config.alpha["onHover"] if over else state.settings.config.alpha["default"]
+		if target != self.transparencyTarget:
+			self.logger.debug(
+				f"transparencyCheck: over={over} target={target} "
+				f"cursor={cursor} frame={self.frameGeometry()}"
+			)
+			self.setWindowOpacity(target)
+			self.transparencyTarget = target
 	def setClassLabels(self, classes:UnifiedClassData, aux:bool = False):
-		self.mainLabel.grid(row=0, column=0)
-		self.timeFrame.grid(row=1, column=0)
-		self.separator.grid(row=2, column=0, sticky="ns")
+		self.mainLabel.show()
+		self.timeFrame.show()
+		self.separator.show()
+		self.classesContainer.show()
 
-		self.classesContainer.grid(row=3, column=0)
-		# region Add Vertical Separators
-		if state.settings.schedule.group == -1:
-			if classes.data is None: needed = 0
-			else: needed = max(0, len(classes.data)-1)
-			while len(self.vertSeparators) < needed:
-				sep = Frame(self.classesContainer, bg=init_data["fg"], width=1)
+		# Detach and hide everything currently in the classes layout
+		while self.classesLayout.count():
+			item = self.classesLayout.takeAt(0)
+			widget = item.widget()
+			if widget is not None:
+				self.classesLayout.removeWidget(widget)
+				widget.hide()
+		for sep in self.vertSeparators:
+			sep.deleteLater()
+		self.vertSeparators.clear()
+
+		data = classes.data or []
+		group = state.settings.schedule.group
+		for frame in self.classFrames:
+			frame.hide()
+		if group != -1:
+			visible_data = [data[group]] if group in range(len(data)) and data[group] is not None else []
+		else:
+			visible_data = [item for item in data if item is not None]
+
+		for col, class_data in enumerate(visible_data):
+			if col > 0:
+				sep = QFrame(self.classesContainer)
+				sep.setFrameShape(QFrame.VLine)
+				sep.setFixedWidth(1)
+				sep.setStyleSheet(f"background-color: {init_data['fg']};")
+				self.classesLayout.addWidget(sep)
 				self.vertSeparators.append(sep)
-			for idx, sep in enumerate(self.vertSeparators):
-				if idx < needed:
-					sep.grid(column=idx*2+1, row=0, sticky="ns")
-				else:
-					sep.grid_forget()
-		# endregion
-		# region Add Classes
-		self.update_idletasks() # to fix wraplength being 1 on startup
-		for i in range(len(classes.data)):
-			obj = self.classFrames[i]
+			if col < len(self.classFrames):
+				frame = self.classFrames[col]
+				frame.show()
+				frame._class = class_data
+				self.classesLayout.addWidget(frame)
 
-			if state.settings.schedule.group == -1 or state.settings.schedule.group == i:
-				obj.grid(row=0, column=i*2, sticky="nsew")
-			
-			if len(classes.data) > 1:
-				obj.wraplength = self.winfo_width()//len(classes.data)
-			elif len(classes.data) == 1:
-				for _ in range(len(self.vertSeparators)):
-					self.vertSeparators.pop().grid_forget()
-				for j in self.classFrames:
-					j.grid_forget()
-				obj.wraplength = self.winfo_width()
-				obj.grid(row=0, column=0, sticky="nsew")
-			else:
-				obj.grid_forget()
-			
-			if state.settings.config.showTeacher:
-				obj.teacherLabel.grid(row=2)
-				obj.grid_rowconfigure(2, weight=1, minsize=20)
-			else:
-				obj.teacherLabel.grid_forget()
-			obj._class = classes.data[i]
-		# endregion
+		if len(visible_data) > 1:
+			for frame in self.classFrames:
+				frame.wraplength = max(self.width() // len(visible_data), 40)
+		elif len(visible_data) == 1:
+			for frame in self.classFrames:
+				frame.wraplength = self.width()
+
 		# region Exam and Homework icons
 		if state.settings.events.current_exam():
-			self.homeworkLabel.grid_forget()
-			self.examLabel.grid(row=1, column=3)
+			self.homeworkLabel.hide()
+			self.examLabel.show()
 		elif state.settings.events.current_homework():
-			self.examLabel.grid_forget()
-			self.homeworkLabel.grid(row=1, column=3)
+			self.examLabel.hide()
+			self.homeworkLabel.show()
 		else:
-			self.examLabel.grid_forget()
-			self.homeworkLabel.grid_forget()
+			self.examLabel.hide()
+			self.homeworkLabel.hide()
 		# endregion
 		# region Aux label
-		if not aux:
-			self.auxLabel.grid_forget()
-		else:
-			self.auxLabel.grid(row=4, column=0, sticky="ns", columnspan=3)
+		self.auxLabel.setVisible(aux)
 	# endregion
 	alerted:datetime = datetime.fromtimestamp(0)
 	def showAlertPopup(self, alert:dict[str, str]):
 		loc = state.settings.localization
-		bg = f"#{state.settings.config.background:06x}"
-		fg = f"#{state.settings.config.foreground:06x}"
-		popup = Toplevel(self)
-		popup.title(loc.alert.title)
-		popup.configure(bg=bg, padx=14, pady=12)
-		popup.attributes("-topmost", True)
-		popup.resizable(False, False)
-		Label(
-			popup,
-			text=alert.get("message", loc.alert.defaultText),
-			bg=bg,
-			fg=fg,
-			justify="center",
-			wraplength=280,
-		).pack(fill="both", expand=True, pady=(0, 10))
-		Button(popup, text="OK", command=popup.destroy).pack()
-		popup.update_idletasks()
-		x = self.winfo_screenwidth() // 2 - popup.winfo_width() // 2
-		y = self.winfo_screenheight() // 2 - popup.winfo_height() // 2
-		popup.geometry(f"+{x}+{y}")
-
+		box = QMessageBox(self)
+		box.setWindowTitle(loc.alert.title)
+		box.setText(alert.get("message", loc.alert.defaultText))
+		box.setIcon(QMessageBox.Information)
+		box.setStandardButtons(QMessageBox.Ok)
+		box.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+		box.exec()
 	def sendAlert(self):
 		if len(state.settings.events.alerts) == 0:
 			return
@@ -367,7 +405,7 @@ class Clock(Tk):
 			time = datetime.combine(state.getTime().date(), datetime.strptime(alert["time"], "%H:%M").time())
 			if (
 				self.alerted < (rn := state.getTime().replace(second=0, microsecond=0)) and 
-	   			time.replace(second=0, microsecond=0) == rn and 
+				time.replace(second=0, microsecond=0) == rn and 
 				(
 					(date is not None and date.date() == rn.date()) or 
 					date is None
@@ -396,26 +434,26 @@ class Clock(Tk):
 			if state.schedule._date != state.getTime().date():
 				self.logger.debug("Day changed since last loop")
 				state.schedule = Schedule()
-				if len(state.schedule.classes) == 0: await asleep(60*30) # 30 min delay
+				if len(state.schedule.classes) == 0:
+					await asleep(60*30) # 30 min delay
 				continue
 			now = state.getTime()
 			now_time = now.time()
 			self.sendAlert()
 			loc = state.settings.localization
-			self.grid_rowconfigure(0, weight=0)
 			for num, _class in enumerate(state.schedule.classes):
 				if _class.data is None:
 					continue
 				if ((_ := datetime.combine(now, _class.start) + timedelta(seconds=delay)).time() > now_time): # Break time
 					tmp = _ - now
-					self.mainLabel.config(text=loc.format(loc.mainlabel.onBreak, num=f"{_class.classIndex}{loc.classNumbering.getSuffix(num+1)}"))
-					self.timeLabel.config(text=f"{f"{tmp.seconds//3600:02}:" if tmp.seconds//3600 != 0 else ""}{(tmp.seconds//60)%60:02}:{tmp.seconds%60:02}")
+					self.mainLabel.setText(loc.format(loc.mainlabel.onBreak, num=f"{_class.classIndex}{loc.classNumbering.getSuffix(num+1)}"))
+					self.timeLabel.setText(f"{f"{tmp.seconds//3600:02}:" if tmp.seconds//3600 != 0 else ""}{(tmp.seconds//60)%60:02}:{tmp.seconds%60:02}")
 					self.setClassLabels(_class)
 					break
 				elif ((_ := datetime.combine(now, _class.end) + timedelta(seconds=delay)).time() > now_time): # In class
 					tmp = _ - now
-					self.mainLabel.config(text=loc.format(loc.mainlabel.inClass, num=f"{_class.classIndex}{loc.classNumbering.getSuffix(num+1)}"))
-					self.timeLabel.config(text=f"{f"{tmp.seconds//3600:02}:" if tmp.seconds//3600 != 0 else ""}{(tmp.seconds//60)%60:02}:{tmp.seconds%60:02}")
+					self.mainLabel.setText(loc.format(loc.mainlabel.inClass, num=f"{_class.classIndex}{loc.classNumbering.getSuffix(num+1)}"))
+					self.timeLabel.setText(f"{f"{tmp.seconds//3600:02}:" if tmp.seconds//3600 != 0 else ""}{(tmp.seconds//60)%60:02}:{tmp.seconds%60:02}")
 					if (
 						tmp.seconds > 60*10 or # More than 10 minutes left
 						num == len(state.schedule.classes)-1 # Last class of the day
@@ -428,18 +466,18 @@ class Clock(Tk):
 						self.setClassLabels(next_classes, aux=True)
 					break
 			else: # No class ends after now (No If branch broke the loop)
-				self.mainLabel.config(text=loc.mainlabel.dayOver)
-				self.grid_rowconfigure(0, weight=100)
+				self.mainLabel.setText(loc.mainlabel.dayOver)
 				state.currentClassIndex = -1
-				for frame in self.classFrames: 
-					if frame.winfo_ismapped(): frame.grid_forget()
-				self.auxLabel.grid_forget()
-				self.separator.grid_forget()
-				[i.grid_forget() for i in self.vertSeparators]
-				self.timeFrame.grid_forget()
+				for frame in self.classFrames:
+					frame.hide()
+				self.auxLabel.hide()
+				self.separator.hide()
+				self.timeFrame.hide()
+				self.classesContainer.hide()
 				try:
 					await asleep(10)
-				except KeyboardInterrupt: return
+				except KeyboardInterrupt:
+					return
 				continue
 			update_delay = self.batterySaverEnabled(5, 1)
 			if state.dummyDate is not None:
@@ -447,4 +485,5 @@ class Clock(Tk):
 			delay = min(max(0.01, update_delay - (perf_counter() - _start)), 10)
 			try:
 				await asleep(delay)
-			except KeyboardInterrupt: return
+			except KeyboardInterrupt:
+				return

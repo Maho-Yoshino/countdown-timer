@@ -1,6 +1,4 @@
-Pillow==12.0.0
-pystray==0.19.5
 aiohttp==3.13.2
 pyinstaller
 PyGithub==2.8.1
-tkSvg
+PySide6>=6.10.1,<7

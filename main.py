@@ -1,24 +1,22 @@
 import sys
 sys.dont_write_bytecode = True # Prevent '__pycache__' creation
+import signal
 from asyncio import new_event_loop, set_event_loop, all_tasks, gather
 from logging import getLogger, WARNING, DEBUG, INFO, Formatter
 from logging.handlers import TimedRotatingFileHandler
-from tkinter import messagebox
-from sys import executable, argv, platform
+from sys import executable, argv
 from pathlib import Path
 from datetime import datetime
 from os import path, chdir, environ, _exit
+from hashlib import sha1
 from github import Github, Repository, GitRelease
-from ctypes import windll
-from ctypes.wintypes import BOOL
+from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QTimer, QLockFile, QDir
 import modules.state as state
 from modules.settings import Settings
 from ui.clock import Clock
 from ui.tray import Tray
-from time import sleep
 logger = getLogger()
-getLogger("PIL").setLevel(WARNING)
-getLogger("pystray").setLevel(WARNING)
 getLogger("asyncio").setLevel(WARNING)
 
 # region Setting PATH
@@ -38,7 +36,7 @@ class Version:
 	# 1 - Pre-release
 	# 2 - Beta
 	# 3 - Alpha
-	subversion:int 
+	subversion:int
 	__subver_map = {
 		"release": 0,
 		"pre-release": 1,
@@ -53,7 +51,7 @@ class Version:
 			self.major = int(tmp[0])
 		if len(tmp) > 1:
 			self.minor = int(tmp[1])
-		if len(tmp) > 2 and "-" in tmp[2]: 
+		if len(tmp) > 2 and "-" in tmp[2]:
 			tmp2 = tmp[2].split("-")
 			self.patch = int(tmp2[0])
 			self.subversion = self.__subver_map.get(tmp2[1], 0)
@@ -73,62 +71,102 @@ class Version:
 VERSION:"Version" = Version("3.0.0")
 def checkUpdate():
 	logger.info("Checking for updates...")
-	repo:Repository.Repository = Github().get_repo("Maho-Yoshino/countdown-timer")
-	latest_release:GitRelease.GitRelease = repo.get_releases()[0]
-	tag = latest_release.tag_name.lstrip("v")
-	latest_version = Version(tag)
+	try:
+		repo:Repository.Repository = Github().get_repo("Maho-Yoshino/countdown-timer")
+		latest_release:GitRelease.GitRelease = repo.get_releases()[0]
+		tag = latest_release.tag_name.lstrip("v")
+		latest_version = Version(tag)
+	except Exception:
+		logger.exception("Failed to check for updates")
+		return
 	logger.debug(f"Latest version online: {latest_version}")
 	logger.debug(f"Current version: {VERSION}")
 	if latest_version > VERSION:
 		logger.warning(f"Update available ({VERSION} -> {latest_version})")
-		loc = state.settings.localization
-		response = messagebox.askyesnocancel(
-			loc.messages.updatePrompt.title, 
-			loc.format(
-				loc.messages.updatePrompt.message, 
-				current=VERSION, 
-				latest=latest_version
-			), 
-			icon="warning", 
-			default=messagebox.YES
-		)
-		if response:
-			logger.info("User accepted automatic update")
-			# TODO: Finish auto-updater
-		elif response is None:
-			logger.info("User asked to not be reminded again")
-			state.settings.config.ignoreUpdates = True
-		else:
-			logger.info("User denied automatic update")
+		state.callLater(_showUpdatePrompt, latest_version)
 	else:
 		logger.info("Running the latest version.")
+def _showUpdatePrompt(latest_version:"Version"):
+	loc = state.settings.localization
+	box = QMessageBox()
+	box.setWindowTitle(loc.messages.updatePrompt.title)
+	box.setText(loc.format(
+		loc.messages.updatePrompt.message,
+		current=VERSION,
+		latest=latest_version
+	))
+	box.setIcon(QMessageBox.Warning)
+	yes_btn = box.addButton(QMessageBox.Yes)
+	no_btn = box.addButton(QMessageBox.No)
+	cancel_btn = box.addButton(QMessageBox.Cancel)
+	box.setDefaultButton(yes_btn)
+	box.exec()
+	clicked = box.clickedButton()
+	if clicked is yes_btn:
+		logger.info("User accepted automatic update")
+		# TODO: Finish auto-updater
+	elif clicked is cancel_btn:
+		logger.info("User asked to not be reminded again")
+		state.settings.config.ignoreUpdates = True
+	else:
+		logger.info("User denied automatic update")
 
 # endregion
 state.settings = Settings()
 
+_lock_file:QLockFile = None
 def findInstance(name:str) -> bool:
 	"""Checks and returns if another instance of the application is running"""
-	k32 = windll.kernel32
-	mutex = k32.CreateMutexW(None, BOOL(True), name)
-	if k32.GetLastError() == 183:
+	global _lock_file
+	lock_name = sha1(name.encode("utf-8")).hexdigest()
+	lock_path = path.join(QDir.tempPath(), f"countdown-timer-{lock_name}.lock")
+	_lock_file = QLockFile(lock_path)
+	_lock_file.setStaleLockTime(0)
+	if not _lock_file.tryLock(100):
 		return True
 	return False
+def _graceful_quit():
+	"""Perform the same shutdown as the tray's Exit menu item."""
+	try:
+		if getattr(state, "tray", None) is not None:
+			state.tray.quit()
+		else:
+			if getattr(state, "runtime", None) is not None:
+				state.runtime.stop()
+			if getattr(state, "app", None) is not None:
+				state.app.quit()
+	except Exception:
+		logger.exception("Failed to gracefully shut down")
+		_exit(1)
+def _signal_handler(signum, frame):
+	# Qt work must not happen directly inside a signal handler, so defer the
+	# shutdown to the event loop (also prevents Ctrl+C from being swallowed
+	# by the QTimer-driven asyncio pump).
+	try:
+		QTimer.singleShot(0, _graceful_quit)
+	except Exception:
+		_exit(1)
 def main(dummyDate:datetime|None = None):
+	# The clock overlay needs window positioning, opacity, always-on-top and
+	# click-through. The native Wayland platform plugin does not support those,
+	# so prefer XWayland (xcb) whenever an X display is available.
+	if (
+		sys.platform.startswith("linux")
+		and environ.get("WAYLAND_DISPLAY")
+		and environ.get("DISPLAY")
+		and "QT_QPA_PLATFORM" not in environ
+	):
+		environ["QT_QPA_PLATFORM"] = "xcb"
+	app = QApplication.instance() or QApplication(argv)
+	app.setQuitOnLastWindowClosed(False)
+	state.app = app
 	loc = state.settings.localization
-	if (platform != "win32"):
-		logger.critical(f"User is not using windows (platform: {platform})")
-		messagebox.showerror(
-			loc.messages.windowsOnly.title, 
-			loc.messages.windowsOnly.message, 
-			icon="error"
-		)
-		return
 	if (findInstance(state.windowHandle)):
 		logger.critical("Another instance is already running.\nClosing application.")
-		messagebox.showerror(
-			loc.messages.anotherInstance.title, 
-			loc.messages.anotherInstance.message, 
-			icon="error"
+		QMessageBox.critical(
+			None,
+			loc.messages.anotherInstance.title,
+			loc.messages.anotherInstance.message
 		)
 		return
 	debug:bool
@@ -144,10 +182,10 @@ def main(dummyDate:datetime|None = None):
 		debug = True # Not ran from this file directly, a.k.a. testing another module, Always True
 	# endregion
 	if not state.settings.config.ignoreUpdates:
-		checkUpdate()
+		from threading import Thread
+		Thread(target=checkUpdate, daemon=True).start()
 	if dummyDate is not None:
 		state.dummyDate = dummyDate
-		del dummyDate
 	def log_namer(default_name:str):
 		dirname = path.dirname(default_name)
 		filename = path.basename(default_name)
@@ -169,11 +207,23 @@ def main(dummyDate:datetime|None = None):
 	state.runtime = new_event_loop()
 	set_event_loop(state.runtime)
 	state.clock = Clock()
-	state.tkPumpTask = state.runtime.create_task(state.tkPump(state.clock))
-	state.tkPumpTask.add_done_callback(state.exc_handler)
 	state.tray = Tray()
-	try:
+	# QTimer drives the asyncio event loop while Qt runs its own loop.
+	# Keep each asyncio slice short so Qt still gets plenty of time to process
+	# repaints and input (otherwise the main thread is saturated and visual
+	# updates, like window opacity changes, stall until an event wakes it up).
+	pump = QTimer()
+	pump.setInterval(16) # ~60 FPS
+	def tick():
+		state.runtime.call_later(0.002, state.runtime.stop)
 		state.runtime.run_forever()
+	pump.timeout.connect(tick)
+	pump.start()
+	state.pumpTimer = pump
+	signal.signal(signal.SIGINT, _signal_handler)
+	signal.signal(signal.SIGTERM, _signal_handler)
+	try:
+		sys.exit(app.exec())
 	finally:
 		pending = [task for task in all_tasks(state.runtime) if not task.done()]
 		for task in pending:
@@ -184,7 +234,6 @@ def main(dummyDate:datetime|None = None):
 		if hasattr(state.runtime, "shutdown_default_executor"):
 			state.runtime.run_until_complete(state.runtime.shutdown_default_executor())
 		state.runtime.close()
-		_exit(0)
 
 try:
 	if environ.get('TERM_PROGRAM') == 'vscode':
@@ -192,16 +241,12 @@ try:
 		#main(datetime(year=2026, month=4, day=1, hour=12, minute=45, second=0))
 	else:
 		main()
-except KeyboardInterrupt: 
+except KeyboardInterrupt:
 	logger.info("Keyboard Interrupt requested")
-	if hasattr(state.runtime, "shutdown_default_executor"):
-		state.runtime.run_until_complete(state.runtime.shutdown_default_executor())
+	try:
+		if getattr(state, "runtime", None) is not None and not state.runtime.is_closed() and hasattr(state.runtime, "shutdown_default_executor"):
+			state.runtime.run_until_complete(state.runtime.shutdown_default_executor())
+	except Exception:
+		pass
 except Exception as e:
 	logger.exception("An error occurred during runtime", exc_info=e)
-	messagebox.showerror(
-		state.settings.localization.messages.error.title, 
-		state.settings.localization.messages.error.message, 
-		icon="error"
-	)
-finally:
-	_exit(0)
