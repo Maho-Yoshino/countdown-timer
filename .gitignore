@@ -1,2 +1,9 @@
-/logs
+logs/
 settings.json
+.venv
+__pycache__
+csengo.exe
+config/
+output/
+*.spec
+.vscode

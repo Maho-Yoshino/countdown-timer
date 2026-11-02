@@ -1,0 +1,197 @@
+{
+	"noneClass":"Lyukasóra",
+	"messages":{
+		"newSettings": {
+			"title": "Új beállítások fájl",
+			"message": "Egy új beállítás fájl létre lett hozva. Kérem állítsa be az órarendjét"
+		},
+		"error": {
+			"title": "Hiba",
+			"message": "Egy hiba történt futás alatt. A program be fog záródni. Kérem küldjön hiba visszajelzést a https://github.com/Maho-Yoshino/countdown-timer/issues linkre, hogy megjavíthassuk a problémát."
+		},
+		"windowsOnly": {
+			"title": "Ön nem Windows-t használ",
+			"message": "Technikai okok miatt a programot csak Windows-on lehet futtatni."
+		},
+		"anotherInstance": {
+			"title": "Az alkalmazás már fut",
+			"message": "Technikai okok miatt a program csak egyszer futhat egyszerre.\nAz alkalmazás most be fog záródni."
+		},
+		"updatePrompt": {
+			"title": "Frissítés elérhető",
+			"message": "Egy frissítés elérhető az alkalmazásra\nJelenlegi verzió: {current}\nÚj verzió: {latest}\nSzeretne frissíteni?"
+		}
+	},
+	"classNumbering": {
+		"default": "."
+	},
+	"mainlabel":{
+		"inClass": "{num} óra végéig",
+		"onBreak": "Szünet végéig",
+		"dayOver": "A napnak vége"
+	},
+	"alert": {
+		"title": "Értesítés",
+		"defaultText": "Értesítés ideje elérkezett"
+	},
+	"nextClass": "Következő óra",
+	"substitute": "Helyettesítő",
+	"delaySetting":{
+		"title": "Késleltetés beállítása",
+		"label": "Késleltetés beállítása (másodpercben)",
+		"help": "Negatív szám = Sietés\nPozitív szám = Késés",
+		"btn": "Mentés"
+	},
+	"tray": {
+		"name": "Csengetés Visszaszámláló",
+		"delay": "Késleltetés: {time}",
+		"delayMinutesDisplay": "p",
+		"delaySecondsDisplay": "mp",
+		"fullscreen_schedule": "Órarend",
+		"settings": "Beállítások",
+		"close": "Kilépés"
+	},
+	"settings": {
+		"title": "Visszaszámláló Beállítások",
+		"topbar": {
+			"schedule": "Órarend",
+			"classes": "Órák",
+			"special_days": "Speciális napok",
+			"alerts": "Értesítések",
+			"general": "Általános"
+		},
+		"days": {
+			"0": "Hétfő",
+			"1": "Kedd",
+			"2": "Szerda",
+			"3": "Csütörtök",
+			"4": "Péntek",
+			"5": "Szombat",
+			"6": "Vasárnap"
+		},
+		"common": {
+			"custom": "custom",
+			"null_option": "Nincs",
+			"keep": "Megtart",
+			"once": "Csak egyszer"
+		},
+		"classesTab": {
+			"editor.title": "Óra szerkesztése",
+			"editor": {
+				"title": "Órák",
+				"name": "Óra neve",
+				"location": "Óra helye",
+				"teacher": "Óra tanára"
+			},
+			"buttons": {
+				"add": "Hozzáadás",
+				"remove": "Törlés",
+				"remove_no_prompt": "Törlés és ne kérdezze újra",
+				"save": "Mentés"
+			},
+			"placeholders": {
+				"code": "UJ_ORA",
+				"name": "Új óra",
+				"location": "Új hely",
+				"teacher": "Új tanár"
+			},
+			"remove.title": "Óra törlése",
+			"remove.message": "Törli ezt: {class_label}?"
+		},
+		"schedule": {
+			"nav.prev": "<",
+			"nav.next": ">",
+			"nav.today": "Ma",
+			"mode.day": "Nap",
+			"mode.week": "Hét",
+			"mode.week_with_saturday": "Hét szombattal",
+			"mode.full_week": "Egész hét",
+			"title.day": "{day_name}, {date}",
+			"title.week": "{week}. Hét ({start} - {end})",
+			"instruction": "Kattintson egy órára hogy szerkessze az óra adatait.",
+			"add_slot": "Óra hozzáadása",
+			"group": "{index}. csoport",
+			"assignments": {
+				"no_classes.title": "Nincsenek órák",
+				"no_classes.message": "Adjon órákat a beállításokba, mielőtt órarendet szerkesztene.",
+				"dialog.title": "Óra hozzáadása naphoz ({day_name})",
+				"class_number": "Hanyadik óra",
+				"class_label": "Óra ({index})",
+				"secondary_only": "Csak B hétre",
+				"day_only": "Csak erre a napra",
+				"save": "Mentés",
+				"cancel": "Mégse",
+				"split": "Osztály felosztása",
+				"remove_split": "Felosztás törlése"
+			},
+			"class_slot": {
+				"dialog.title": "{day_name} óra",
+				"tab.class_data": "Óra adat",
+				"tab.events": "Események",
+				"tab.alerts": "Értesítések",
+				"row.date": "Dátum",
+				"row.time": "Idő",
+				"row.class_name": "Óra neve",
+				"row.teacher_name": "Tanár neve",
+				"row.room": "Terem",
+				"row.class_index": "Hanyadik óra",
+				"button.change": "Óra változtatása",
+				"button.add_group": "Csoport hozzáadása",
+				"button.delete_slot": "Óra törlése"
+			},
+			"events": {
+				"type.homework": "Házi feladat",
+				"type.exam": "Dolgozat",
+				"invalid.title": "Hibás esemény",
+				"invalid.message": "Esemény szöveg kötelező",
+				"button.add": "Hozzáadás",
+				"button.remove": "Törlés"
+			},
+			"alerts": {
+				"format.before_end": "Vége előtt",
+				"format.since_start": "Kezdés után",
+				"info": "Az értesítés ideje relatív van számítva az óra kezdetétől vagy végétől.",
+				"dialog.add_title": "Értesítés hozzáadása",
+				"dialog.edit_title": "Értesítés módosítása",
+				"calculate_from": "Számítás",
+				"from_end": "Óra vége",
+				"from_start": "Óra kezdete",
+				"message": "Üzenet",
+				"keep_after": "Megtartás értesítés után",
+				"minutes": "X perccel óra kezdete után/vége előtt",
+				"invalid.title": "Érvénytelen értesítés",
+				"button.remove_selected": "Kiválasztott értesítés törlése",
+				"button.add_new": "Új értesítés"
+			},
+			"special_days": {
+				"title": "Speciális napok",
+				"date": "Dátum",
+				"replace_day": "Egész nap helyettesítése",
+				"rows_help": "Oszlopok: hely | kezdet | vége | órák",
+				"button.add_row": "Sor hozzáadása",
+				"button.remove_row": "X",
+				"button.new_date": "Új dátum",
+				"button.save": "Speciális nap mentése",
+				"button.delete": "Törlés",
+				"invalid_date.title": "Érvénytelen dátum",
+				"invalid_date.message": "Használjon egy érvényes dátumot.",
+				"invalid_day.title": "Érvénytelen speciális nap"
+			},
+			"general": {
+				"label.background": "Háttér szín",
+				"label.foreground": "Előtér szín",
+				"label.language": "Nyelv",
+				"label.alpha_default": "Alpha alapérték",
+				"label.alpha_hover": "Alpha érték rámutatáskor",
+				"ignore_updates": "Frissítések kihagyása",
+				"show_teacher": "Tanár megjelenítése",
+				"pick_background": "Háttér szín kiválasztás",
+				"pick_foreground": "Előtér szín kiválasztás",
+				"save": "Mentés",
+				"invalid.title": "Érvénytelen beállítások",
+				"invalid.background": "A háttérszínnek #RRGGBB formátumban kell lennie",
+				"invalid.foreground": "Az előtérszínnek #RRGGBB formátumban kell lennie"
+			}
+		}
+	}
+}
