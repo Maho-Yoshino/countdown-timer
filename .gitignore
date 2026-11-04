@@ -3,7 +3,7 @@ settings.json
 .venv
 __pycache__
 *.exe
-config/
+*config*/
 output/
 *.spec
 .vscode

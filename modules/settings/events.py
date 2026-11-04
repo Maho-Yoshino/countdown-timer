@@ -14,9 +14,9 @@ _defaults = {
 }
 class Events:
 	# NOTE: Changes are not persisted until save() is called explicitly
-	def __init__(self):
+	def __init__(self, config_path: Path):
 		self.datetime_fmt = "%Y-%m-%d"
-		self.path = Path("config") / "events.json"
+		self.path = config_path / "events.json"
 		self.path.parent.mkdir(parents=True, exist_ok=True)
 		if (not self.path.exists()):
 			logger.warning("Events file not found, creating a default one.")

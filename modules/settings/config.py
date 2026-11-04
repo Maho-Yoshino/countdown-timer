@@ -15,9 +15,9 @@ _defaults = {
 def clamp(num:int|float, _min:int|float, _max:int|float): return max(_min, min(num, _max))
 class Config:
 	# NOTE: Changes are not persisted until save() is called explicitly
-	def __init__(self):
+	def __init__(self, config_path: Path):
 		self._logger = getLogger(__name__)
-		self.path = Path("config") / "config.json"
+		self.path = config_path / "config.json"
 		self.path.parent.mkdir(parents=True, exist_ok=True)
 		if (not self.path.exists()):
 			self._logger.warning("Config file not found, creating a default one.")

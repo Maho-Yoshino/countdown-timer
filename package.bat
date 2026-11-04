@@ -25,7 +25,7 @@ echo [Packager] Starting Packager
 	--workpath "%ROOT%\output\work" ^
 	-i "%ROOT%\assets\icon.ico" ^
 	-n "Countdown Timer" ^
-	--collect-all tksvg ^
+	--add-data "%ROOT%\assets;assets" ^
 	--clean "%ROOT%\main.py"
 
 if errorlevel 1 goto :error

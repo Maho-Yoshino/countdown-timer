@@ -7,6 +7,9 @@ from tkinter import Button, Label, Frame, TclError, Tk, Toplevel, PhotoImage
 from ctypes import windll, c_byte, byref, Structure
 from modules.schedule import Schedule
 from modules.settings.schedule import UnifiedClassData, _classData
+from pathlib import Path
+
+ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
 init_data:dict[str, int|str] = {}
 class classFrame(Frame):
@@ -101,7 +104,7 @@ class Clock(Tk):
 		self.logger = getLogger(__name__)
 		# endregion
 		# region Main config
-		self.iconbitmap(default="assets/icon.ico")
+		self.iconbitmap(default=str(ASSETS) / "icon.ico")
 		self.configure(bg=f"#{state.settings.config.background:06x}")
 		self.attributes("-topmost", True)
 		self.title(state.windowHandle)
@@ -205,10 +208,10 @@ class Clock(Tk):
 			self.classFrames.append(classFrame(self.classesContainer, None))
 	def loadSvg(self, filename:str) -> PhotoImage:
 		try:
-			with open(f"assets/{filename}.svg", "r", encoding="utf-8") as file:
+			with open(ASSETS / f"{filename}.svg", "r", encoding="utf-8") as file:
 				svg_text = file.read().replace("<svg ", f"<svg fill='#{state.settings.config.foreground:06x}' ", 1)
 		except FileNotFoundError:
-			self.logger.exception(f"File \"assets/{filename}.png\" could not be found")
+			self.logger.exception(f"File \"{ASSETS / f'{filename}.png'}\" could not be found")
 			raise
 		return PhotoImage(master=self.timeFrame, data=svg_text, format="svg -scaletoheight 25")
 	lastWidth:int = 0

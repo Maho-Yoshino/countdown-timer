@@ -14,9 +14,9 @@ CLASS_KEYS = {"room", "teacher", "name"}
 
 class Classes(dict):
 	# NOTE: Changes are only temporary until save() is called explicitly
-	def __init__(self):
+	def __init__(self, config_path: Path):
 		self._logger = getLogger(__name__)
-		self.path = Path("config") / "classes.json"
+		self.path = config_path / "classes.json"
 		self.path.parent.mkdir(parents=True, exist_ok=True)
 		if (not self.path.exists()):
 			self._logger.warning("Class list file not found, creating default.")

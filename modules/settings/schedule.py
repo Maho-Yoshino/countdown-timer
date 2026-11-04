@@ -48,11 +48,11 @@ _defaults = {
 }
 class ScheduleSettings:
 	# NOTE: Changes are not persisted until save() is called explicitly
-	def __init__(self, classes:'Classes', events:'Events'):
+	def __init__(self, config_path: Path, classes:'Classes', events:'Events'):
 		self._logger = getLogger(__name__)
 		self.classes = classes
 		self.events = events
-		self.path = Path("config") / "schedule.json"
+		self.path = config_path / "schedule.json"
 		self.path.parent.mkdir(parents=True, exist_ok=True)
 		if (not self.path.exists()):
 			self._logger.warning("Schedule file not found, creating a default one.")
