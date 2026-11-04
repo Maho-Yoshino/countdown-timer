@@ -1,21 +1,45 @@
-cls
 @echo off
-if not exist ".venv" (
+cls
+setlocal
+
+pushd "%~dp0" || (
+	echo Failed to access project directory.
+	pause
+	exit /b 1
+)
+
+set "ROOT=%CD%"
+
+if not exist ".venv\Scripts\python.exe" (
 	echo Virtual environment doesn't exist, running setup
-	call setup
+	call setup.bat
+	if errorlevel 1 goto :error
 )
-cd /d "%~dp0"
+
 echo [Packager] Starting Packager
-set "ROOT=%~dp0"
-set "ROOT=%ROOT:~0,-1%"
-"%ROOT%\.venv\Scripts\python.exe" -m PyInstaller --log-level ERROR -y -F -w --distpath "%ROOT%" --workpath "%ROOT%\output\work" -i "%ROOT%\icon.ico" -n "csengo" --clean "%ROOT%\csengo.py"
-if not exist "%ROOT%\output" (
-	echo An error happened while creating package.
-)
-if exist "%ROOT%\output" (
-	rmdir /s /q output
-	del csengo.spec
-	echo Package Made (it can be found in the root directory)
-)
+
+"%ROOT%\.venv\Scripts\python.exe" -m PyInstaller ^
+	--log-level ERROR ^
+	-y -F -w ^
+	--distpath "%ROOT%" ^
+	--workpath "%ROOT%\output\work" ^
+	-i "%ROOT%\assets\icon.ico" ^
+	-n "Countdown Timer" ^
+	--collect-all tksvg ^
+	--clean "%ROOT%\main.py"
+
+if errorlevel 1 goto :error
+
+if exist "%ROOT%\output" rmdir /s /q "%ROOT%\output"
+if exist "%ROOT%\Countdown Timer.spec" del "%ROOT%\Countdown Timer.spec"
+
+echo Package Made (it can be found in the root directory)
+goto :end
+
+:error
+echo An error happened while creating package.
+
+:end
+popd
 pause
-exit
+endlocal

@@ -3,8 +3,7 @@ from datetime import datetime, timedelta
 from asyncio import sleep as asleep, CancelledError
 from time import perf_counter
 from logging import getLogger
-from tkinter import Button, Label, Frame, TclError, Tk, Toplevel
-from tksvg import SvgImage
+from tkinter import Button, Label, Frame, TclError, Tk, Toplevel, PhotoImage
 from ctypes import windll, c_byte, byref, Structure
 from modules.schedule import Schedule
 from modules.settings.schedule import UnifiedClassData, _classData
@@ -204,14 +203,14 @@ class Clock(Tk):
 	
 		for _ in range(max_groups):
 			self.classFrames.append(classFrame(self.classesContainer, None))
-	def loadSvg(self, filename:str) -> SvgImage:
+	def loadSvg(self, filename:str) -> PhotoImage:
 		try:
-			with open(f"assets/{filename}.svg", "r") as file:
-				svg_text = file.read().replace("<svg ", f"<svg fill='#{state.settings.config.foreground:06x}' ")
+			with open(f"assets/{filename}.svg", "r", encoding="utf-8") as file:
+				svg_text = file.read().replace("<svg ", f"<svg fill='#{state.settings.config.foreground:06x}' ", 1)
 		except FileNotFoundError:
 			self.logger.exception(f"File \"assets/{filename}.png\" could not be found")
 			raise
-		return SvgImage(filename, master=self.timeFrame, data=svg_text, scaletoheight=25)
+		return PhotoImage(master=self.timeFrame, data=svg_text, format="svg -scaletoheight 25")
 	lastWidth:int = 0
 	async def setClickThrough(self):
 		self.logger.debug("Setting click-through window")

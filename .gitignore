@@ -2,7 +2,7 @@ logs/
 settings.json
 .venv
 __pycache__
-csengo.exe
+*.exe
 config/
 output/
 *.spec
