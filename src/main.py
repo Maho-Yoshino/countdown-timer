@@ -5,7 +5,7 @@ from os import _exit, path
 
 from packaging.version import Version
 
-import shared
+import const
 
 VERSION: Version = Version("4.0.0")
 #region Logger setup
@@ -15,7 +15,7 @@ def log_namer(default_name:str):
     filename = path.basename(default_name)
     _, _, date = filename.rpartition(".")
     return path.join(dirname, f"{date}.log")
-latestLogPath = shared.LOGS / "latest.log"
+latestLogPath = const.LOGS / "latest.log"
 latestLogPath.touch(exist_ok=True)
 handler = TimedRotatingFileHandler("logs/latest.log", when="midnight", interval=1, backupCount=5)
 handler.suffix = "%Y-%m-%d"
@@ -23,7 +23,7 @@ formatter = Formatter("%(asctime)s:%(name)-15s:%(funcName)-15s:%(lineno)-3d:%(le
 handler.setFormatter(formatter)
 handler.namer = log_namer
 logger.addHandler(handler)
-logger.setLevel(DEBUG if shared.DEBUG else INFO)
+logger.setLevel(DEBUG if const.DEBUG else INFO)
 logger.info(f"Application Starting up (v{VERSION})")
 
 getLogger("PIL").setLevel(WARNING)
@@ -33,17 +33,17 @@ getLogger("asyncio").setLevel(WARNING)
 
 def main():
     try:
-        shared.RUNTIME.run_forever()
+        const.RUNTIME.run_forever()
     finally:
-        pending = [task for task in all_tasks(shared.RUNTIME) if not task.done()]
+        pending = [task for task in all_tasks(const.RUNTIME) if not task.done()]
         for task in pending:
             task.cancel()
         if pending:
-            shared.RUNTIME.run_until_complete(gather(*pending, return_exceptions=True))
-        shared.RUNTIME.run_until_complete(shared.RUNTIME.shutdown_asyncgens())
-        if hasattr(shared.RUNTIME, "shutdown_default_executor"):
-            shared.RUNTIME.run_until_complete(shared.RUNTIME.shutdown_default_executor())
-        shared.RUNTIME.close()
+            const.RUNTIME.run_until_complete(gather(*pending, return_exceptions=True))
+        const.RUNTIME.run_until_complete(const.RUNTIME.shutdown_asyncgens())
+        if hasattr(const.RUNTIME, "shutdown_default_executor"):
+            const.RUNTIME.run_until_complete(const.RUNTIME.shutdown_default_executor())
+        const.RUNTIME.close()
         _exit(0)
 
 try:
