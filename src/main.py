@@ -1,9 +1,9 @@
-import velopack
 from asyncio import all_tasks, gather
 from logging import DEBUG, INFO, WARNING, Formatter, getLogger
 from logging.handlers import TimedRotatingFileHandler
 from os import _exit, path
 
+import velopack
 from packaging.version import Version
 
 import const
