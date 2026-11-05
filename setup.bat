@@ -1,4 +1,3 @@
-cls
 @echo off
 echo [Setup] Beginning setup
 cd "%~dp0"
@@ -14,4 +13,3 @@ pip install -r requirements.txt -q -q
 call deactivate
 echo [Setup] Setup complete
 pause
-exit
