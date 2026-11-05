@@ -1,6 +1,6 @@
 {
-	"noneClass":"Lyukasóra",
-	"messages":{
+	"noneClass": "Lyukasóra",
+	"messages": {
 		"newSettings": {
 			"title": "Új beállítások fájl",
 			"message": "Egy új beállítás fájl létre lett hozva. Kérem állítsa be az órarendjét"
@@ -25,7 +25,7 @@
 	"classNumbering": {
 		"default": "."
 	},
-	"mainlabel":{
+	"mainlabel": {
 		"inClass": "{num} óra végéig",
 		"onBreak": "Szünet végéig",
 		"dayOver": "A napnak vége"
@@ -36,7 +36,7 @@
 	},
 	"nextClass": "Következő óra",
 	"substitute": "Helyettesítő",
-	"delaySetting":{
+	"delaySetting": {
 		"title": "Késleltetés beállítása",
 		"label": "Késleltetés beállítása (másodpercben)",
 		"help": "Negatív szám = Sietés\nPozitív szám = Késés",

@@ -1,6 +1,6 @@
 {
-	"noneClass":"Free period",
-	"messages":{
+	"noneClass": "Free period",
+	"messages": {
 		"newSettings": {
 			"title": "New settings file",
 			"message": "A new, blank settings file has been generated. Please set up your schedule"
@@ -23,16 +23,16 @@
 		}
 	},
 	"classNumbering": {
-		"1":"st",
-		"2":"nd",
-		"3":"rd",
-		"11":"th",
-		"12":"th",
-		"13":"th",
-		"default":"th"
+		"1": "st",
+		"2": "nd",
+		"3": "rd",
+		"11": "th",
+		"12": "th",
+		"13": "th",
+		"default": "th"
 	},
-	"mainlabel":{
-		"inClass":"Until end of {num} class",
+	"mainlabel": {
+		"inClass": "Until end of {num} class",
 		"onBreak": "Until end of break",
 		"dayOver": "The day is over"
 	},
@@ -41,28 +41,28 @@
 		"defaultText": "The alert has arrived"
 	},
 	"nextClass": "Next class",
-	"substitute":"Substitute",
+	"substitute": "Substitute",
 	"delaySetting": {
-		"title":"Delay Time Input",
-		"label":"Set Delay Time (in seconds)",
-		"help":"Negative = Earlier\nPositive = Later",
-		"btn":"Save"
+		"title": "Delay Time Input",
+		"label": "Set Delay Time (in seconds)",
+		"help": "Negative = Earlier\nPositive = Later",
+		"btn": "Save"
 	},
 	"tray": {
 		"name": "Countdown timer",
-		"delay":"Delay: {time}",
+		"delay": "Delay: {time}",
 		"delayMinutesDisplay": "min",
 		"delaySecondsDisplay": "s",
-		"fullscreen_schedule":"Fullscreen schedule",
-		"settings":"Settings",
-		"close":"Exit"
+		"fullscreen_schedule": "Fullscreen schedule",
+		"settings": "Settings",
+		"close": "Exit"
 	},
 	"settings": {
 		"title": "Countdown timer settings",
 		"topbar": {
-			"schedule":"Schedule",
+			"schedule": "Schedule",
 			"classes": "classes",
-			"special_days":"Special Days",
+			"special_days": "Special Days",
 			"alerts": "Alerts",
 			"general": "General"
 		},

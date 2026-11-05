@@ -12,10 +12,10 @@ VERSION: Version = Version("4.0.0")
 #region Logger setup
 logger = getLogger()
 def log_namer(default_name:str):
-    dirname = path.dirname(default_name)
-    filename = path.basename(default_name)
-    _, _, date = filename.rpartition(".")
-    return path.join(dirname, f"{date}.log")
+	dirname = path.dirname(default_name)
+	filename = path.basename(default_name)
+	_, _, date = filename.rpartition(".")
+	return path.join(dirname, f"{date}.log")
 latestLogPath = const.LOGS / "latest.log"
 latestLogPath.touch(exist_ok=True)
 handler = TimedRotatingFileHandler("logs/latest.log", when="midnight", interval=1, backupCount=5)
@@ -44,26 +44,26 @@ def check_updates():
 	return True
 
 def main():
-    velopack.App.run()
-    try:
-        const.RUNTIME.run_forever()
-    finally:
-        pending = [task for task in all_tasks(const.RUNTIME) if not task.done()]
-        for task in pending:
-            task.cancel()
-        if pending:
-            const.RUNTIME.run_until_complete(gather(*pending, return_exceptions=True))
-        const.RUNTIME.run_until_complete(const.RUNTIME.shutdown_asyncgens())
-        if hasattr(const.RUNTIME, "shutdown_default_executor"):
-            const.RUNTIME.run_until_complete(const.RUNTIME.shutdown_default_executor())
-        const.RUNTIME.close()
-        _exit(0)
+	velopack.App.run()
+	try:
+		const.RUNTIME.run_forever()
+	finally:
+		pending = [task for task in all_tasks(const.RUNTIME) if not task.done()]
+		for task in pending:
+			task.cancel()
+		if pending:
+			const.RUNTIME.run_until_complete(gather(*pending, return_exceptions=True))
+		const.RUNTIME.run_until_complete(const.RUNTIME.shutdown_asyncgens())
+		if hasattr(const.RUNTIME, "shutdown_default_executor"):
+			const.RUNTIME.run_until_complete(const.RUNTIME.shutdown_default_executor())
+		const.RUNTIME.close()
+		_exit(0)
 
 try:
-    main()
+	main()
 except KeyboardInterrupt:
-    logger.info("KeyboardInterrupt received. Exiting...")
-    _exit(0)
+	logger.info("KeyboardInterrupt received. Exiting...")
+	_exit(0)
 except Exception:
-    logger.exception("An unhandled exception occurred during startup")
-    _exit(1)
+	logger.exception("An unhandled exception occurred during startup")
+	_exit(1)
