@@ -1,6 +1,12 @@
 import asyncio
 from os import environ
-from platformdirs import user_data_path, user_config_path, user_log_path, user_cache_path
+
+from platformdirs import (
+    user_cache_path,
+    user_config_path,
+    user_data_path,
+    user_log_path,
+)
 
 APP_NAME = "countdown-timer"
 APP_AUTHOR = "MahoYoshino"
