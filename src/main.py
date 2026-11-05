@@ -2,7 +2,6 @@ from asyncio import all_tasks, gather
 from logging import DEBUG, INFO, WARNING, Formatter, getLogger
 from logging.handlers import TimedRotatingFileHandler
 from os import _exit, path
-from pathlib import Path
 
 from packaging.version import Version
 
