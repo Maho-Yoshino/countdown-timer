@@ -18,7 +18,7 @@ def log_namer(default_name:str):
 	return path.join(dirname, f"{date}.log")
 latestLogPath = const.LOGS / "latest.log"
 latestLogPath.touch(exist_ok=True)
-handler = TimedRotatingFileHandler("logs/latest.log", when="midnight", interval=1, backupCount=5)
+handler = TimedRotatingFileHandler(latestLogPath, when="midnight", interval=1, backupCount=5)
 handler.suffix = "%Y-%m-%d"
 formatter = Formatter("%(asctime)s:%(name)-15s:%(funcName)-15s:%(lineno)-3d:%(levelname)-7s:%(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 handler.setFormatter(formatter)

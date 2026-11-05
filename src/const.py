@@ -24,4 +24,4 @@ CONFIG = user_config_path(APP_NAME, APP_AUTHOR, ensure_exists=True)
 DATA = user_data_path(APP_NAME, APP_AUTHOR, ensure_exists=True)
 CACHE = user_cache_path(APP_NAME, APP_AUTHOR, ensure_exists=True)
 
-RUNTIME: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+RUNTIME: asyncio.AbstractEventLoop = asyncio.new_event_loop()
