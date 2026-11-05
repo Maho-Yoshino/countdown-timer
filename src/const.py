@@ -10,6 +10,7 @@ from platformdirs import (
 
 APP_NAME = "countdown-timer"
 APP_AUTHOR = "MahoYoshino"
+REPO = "https://github.com/Maho-Yoshino/countdown-timer"
 
 DEBUG: bool = environ.get('TERM_PROGRAM') == 'vscode'
 if not DEBUG:

@@ -1,3 +1,4 @@
+import velopack
 from asyncio import all_tasks, gather
 from logging import DEBUG, INFO, WARNING, Formatter, getLogger
 from logging.handlers import TimedRotatingFileHandler
@@ -31,7 +32,19 @@ getLogger("pystray").setLevel(WARNING)
 getLogger("asyncio").setLevel(WARNING)
 #endregion
 
+def check_updates():
+	manager = velopack.UpdateManager(const.REPO)
+
+	update = manager.check_for_updates()
+	if update is None:
+		return False
+
+	manager.download_updates(update)
+	manager.apply_updates_and_restart(update)
+	return True
+
 def main():
+    velopack.App.run()
     try:
         const.RUNTIME.run_forever()
     finally:
