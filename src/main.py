@@ -1,11 +1,11 @@
-from asyncio import new_event_loop, set_event_loop, all_tasks, gather
-from logging import getLogger, WARNING, DEBUG, INFO, Formatter
+from asyncio import all_tasks, gather
+from logging import DEBUG, INFO, WARNING, Formatter, getLogger
 from logging.handlers import TimedRotatingFileHandler
-from sys import executable, argv, platform
+from os import _exit, path
 from pathlib import Path
-from datetime import datetime
-from os import path, _exit
+
 from packaging.version import Version
+
 import shared
 
 VERSION: Version = Version("4.0.0")
@@ -23,7 +23,7 @@ if not latestLogPath.exists():
         logger.warning("Could not find any 'latest.log', Created an empty one")
 handler = TimedRotatingFileHandler("logs/latest.log", when="midnight", interval=1, backupCount=5)
 handler.suffix = "%Y-%m-%d"
-formatter = Formatter(f"%(asctime)s:%(name)-15s:%(funcName)-15s:%(lineno)-3d:%(levelname)-7s:%(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+formatter = Formatter("%(asctime)s:%(name)-15s:%(funcName)-15s:%(lineno)-3d:%(levelname)-7s:%(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 handler.setFormatter(formatter)
 handler.namer = log_namer
 logger.addHandler(handler)
@@ -49,13 +49,12 @@ def main():
             shared.RUNTIME.run_until_complete(shared.RUNTIME.shutdown_default_executor())
         shared.RUNTIME.close()
         _exit(0)
-    pass
 
 try:
     main()
 except KeyboardInterrupt:
     logger.info("KeyboardInterrupt received. Exiting...")
     _exit(0)
-except Exception as e:
+except Exception:
     logger.exception("An unhandled exception occurred during startup")
     _exit(1)

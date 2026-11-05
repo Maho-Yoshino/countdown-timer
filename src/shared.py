@@ -1,5 +1,5 @@
-from os import environ
 import asyncio
+from os import environ
 
 DEBUG: bool = environ.get('TERM_PROGRAM') == 'vscode'
 if not DEBUG:
