@@ -16,11 +16,8 @@ def log_namer(default_name:str):
     filename = path.basename(default_name)
     _, _, date = filename.rpartition(".")
     return path.join(dirname, f"{date}.log")
-latestLogPath = Path("logs") / "latest.log"
-latestLogPath.parent.mkdir(exist_ok=True, parents=True)
-if not latestLogPath.exists():
-    with latestLogPath.open("x"):
-        logger.warning("Could not find any 'latest.log', Created an empty one")
+latestLogPath = shared.LOGS / "latest.log"
+latestLogPath.touch(exist_ok=True)
 handler = TimedRotatingFileHandler("logs/latest.log", when="midnight", interval=1, backupCount=5)
 handler.suffix = "%Y-%m-%d"
 formatter = Formatter("%(asctime)s:%(name)-15s:%(funcName)-15s:%(lineno)-3d:%(levelname)-7s:%(message)s", datefmt="%Y-%m-%d %H:%M:%S")
