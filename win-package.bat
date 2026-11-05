@@ -12,7 +12,7 @@ set "ROOT=%CD%"
 
 if not exist ".venv\Scripts\python.exe" (
 	echo Virtual environment doesn't exist, running setup
-	call setup.bat
+	call win-setup.bat
 	if errorlevel 1 goto :error
 )
 
@@ -25,14 +25,14 @@ echo [Packager] Starting Packager
 	--workpath "%ROOT%\output\work" ^
 	-i "%ROOT%\assets\icon.ico" ^
 	-n "Countdown Timer" ^
-	--clean "%ROOT%\main.py"
+	--clean "%ROOT%\src\main.py"
 
 if errorlevel 1 goto :error
 
 if exist "%ROOT%\output" rmdir /s /q "%ROOT%\output"
 if exist "%ROOT%\Countdown Timer.spec" del "%ROOT%\Countdown Timer.spec"
 
-echo Package Made (it can be found in the root directory)
+echo [Packager] Package Made (it can be found in the root directory)
 goto :end
 
 :error

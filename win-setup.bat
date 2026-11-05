@@ -12,4 +12,3 @@ echo [Setup] Installing requirements
 pip install -r requirements.txt -q -q
 call deactivate
 echo [Setup] Setup complete
-pause
