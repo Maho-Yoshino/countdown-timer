@@ -8,16 +8,16 @@ from platformdirs import (
 	user_log_path,
 )
 
-APP_NAME = "countdown-timer"
-APP_AUTHOR = "MahoYoshino"
-REPO = "https://github.com/Maho-Yoshino/countdown-timer"
-
 DEBUG: bool = environ.get('TERM_PROGRAM') == 'vscode'
 if not DEBUG:
 	from argparse import ArgumentParser
 	parser = ArgumentParser()
 	parser.add_argument("-d", "--debug", help="Debug mode switch", action="store_true")
 	DEBUG = parser.parse_args().debug
+
+APP_NAME = "countdown-timer" if not DEBUG else "countdown-timer-dev"
+APP_AUTHOR = "MahoYoshino"
+REPO = "https://github.com/Maho-Yoshino/countdown-timer"
 
 LOGS = user_log_path(APP_NAME, APP_AUTHOR, ensure_exists=True)
 CONFIG = user_config_path(APP_NAME, APP_AUTHOR, ensure_exists=True)
