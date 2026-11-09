@@ -37,8 +37,10 @@ CREATE TABLE schedule {
 CREATE TABLE schedule_overrides {
 	date TEXT NOT NULL,
 	classNum INTEGER NOT NULL,
-	classID INTEGER REFERENCES classes(id),
+	classID INTEGER,
 
-	PRIMARY KEY (date, classNum)
+	PRIMARY KEY (date, classNum),
+	-- Cascade deletion for classes that have happened already
+	FOREIGN KEY (classID) REFERENCES classes(id) ON DELETE CASCADE
 }
 
