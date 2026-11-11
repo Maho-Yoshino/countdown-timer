@@ -5,12 +5,26 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Main",
+            "name": "[Debug] Main",
             "type": "debugpy",
+			"env": {
+				"DEBUG": "1"
+			},
             "request": "launch",
             "program": "main.py",
             "cwd": "${workspaceFolder}/src",
             "console": "integratedTerminal"
-        }
+        },
+		{
+			"name": "[Lint] Ruff",
+			"type": "debugpy",
+			"request": "launch",
+			"module": "ruff",
+			"args": [
+				"check", "--fix"
+			],
+			"cwd": "${workspaceFolder}/src",
+			"console": "integratedTerminal"
+		}
     ]
 }

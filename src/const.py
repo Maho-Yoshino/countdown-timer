@@ -1,5 +1,5 @@
 import asyncio
-from os import environ
+from os import environ, getenv
 
 from platformdirs import (
 	user_cache_path,
@@ -8,12 +8,7 @@ from platformdirs import (
 	user_log_path,
 )
 
-DEBUG: bool = environ.get('TERM_PROGRAM') == 'vscode'
-if not DEBUG:
-	from argparse import ArgumentParser
-	parser = ArgumentParser()
-	parser.add_argument("-d", "--debug", help="Debug mode switch", action="store_true")
-	DEBUG = parser.parse_args().debug
+DEBUG:bool = int(getenv("DEBUG", "0")) == 1
 
 APP_NAME = "countdown-timer" if not DEBUG else "countdown-timer-dev"
 APP_AUTHOR = "MahoYoshino"
