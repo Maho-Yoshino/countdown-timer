@@ -1,10 +1,11 @@
 import aiosqlite
 import const as Const
-from typing import AsyncGenerator
+from contextlib import asynccontextmanager
 
 db = Const.DATA / "schedule.db"
 
-async def transaction() -> AsyncGenerator[aiosqlite.Connection]:
+@asynccontextmanager
+async def transaction():
 	con = await aiosqlite.connect(db)
 	con.row_factory = aiosqlite.Row
 	try:

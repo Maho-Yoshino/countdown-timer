@@ -4,12 +4,13 @@ from enum import StrEnum
 class _table(StrEnum):
 	__table__: ClassVar[str]
 
-	def __str__(self) -> str:
-		return self.__table__
-
 	@classmethod
-	def q(cls, column: "_table") -> str:
-		return f"{cls.__table__}.{column.value}"
+	def t(cls) -> str:
+		return cls.__table__
+
+	def q(self) -> str:
+		return f"{self.__table__}.{self.value}"
+
 class classes(_table):
 	__table__ = "classes"
 	id = "id"
