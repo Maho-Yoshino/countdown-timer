@@ -1,7 +1,10 @@
-import aiosqlite
 from datetime import date, time
+
+import aiosqlite
+
 import database.manager as Manager
 import database.schema as dbSchema
+
 
 class Schedule:
 	class ClassData:

@@ -1,4 +1,4 @@
-from json import loads, dumps
+from json import dumps, loads
 from logging import getLogger as _getLogger
 from pathlib import Path
 from typing import Literal, TypedDict

@@ -1,6 +1,8 @@
-import aiosqlite
-import const as Const
 from contextlib import asynccontextmanager
+
+import aiosqlite
+
+import const as Const
 
 db = Const.DATA / "schedule.db"
 

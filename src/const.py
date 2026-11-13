@@ -1,5 +1,5 @@
 import asyncio
-from os import environ, getenv
+from os import getenv
 
 from platformdirs import (
 	user_cache_path,
